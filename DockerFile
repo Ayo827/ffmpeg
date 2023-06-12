@@ -1,0 +1,25 @@
+# Use a Node.js image from Docker Hub
+FROM node:16-alpine
+
+# Set the working directory
+WORKDIR /usr/src/app
+
+# Copy package.json and package-lock.json
+COPY package*.json ./
+
+# Install dependencies
+RUN npm install
+
+## following 3 lines are for installing ffmepg
+RUN apk update
+RUN apk add
+RUN apk add ffmpeg
+
+# Bundle app source
+COPY . .
+
+# Expose the port the app runs on
+EXPOSE 8080 6789
+
+# Start the app
+CMD [ "node", "server.js" ]
