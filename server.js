@@ -3,20 +3,22 @@ const app = express();
 const WebSocket = require('ws');
 const ffmpeg = require('fluent-ffmpeg');
 const which = require('which');
-
-
-
-const port = process.env.PORT || 3000; // Use the PORT environment variable if it exists
-
 const Stream = require("node-rtsp-stream");
+
+const port = process.env.PORT || 3000;
 
 let stream;
 
 // This is needed to parse the body of POST requests
 app.use(express.json());
 
+const server = app.listen(port, () => {
+  console.log(`App is listening at http://localhost:${port}`);
+});
+
 // Create a WebSocket server
-const wss = new WebSocket.Server({ port: 6789 });
+const wss = new WebSocket.Server({ server });
+
 const ffmpegPath = which.sync('ffmpeg');
 ffmpeg.setFfmpegPath(ffmpegPath);
 
@@ -24,20 +26,14 @@ ffmpeg.setFfmpegPath(ffmpegPath);
 wss.on('connection', function connection(ws) {
   console.log('A new client connected');
 
-  // Event: Message received
   ws.on('message', function incoming(message) {
     console.log('Received message:', message);
     // Handle the received message
   });
-
-  // Event: Connection closed
-  ws.on('close', function close() {
-    console.log('A client disconnected');
-  });
 });
 
 app.get("/ws-url", (req, res) => {
-  res.send({ wsUrl: process.env.WS_URL || "6789" });
+  res.send({ wsUrl: process.env.WS_URL || port });
 });
 
 app.post("/set-rtsp", (req, res) => {
@@ -53,7 +49,7 @@ app.post("/set-rtsp", (req, res) => {
     stream = new Stream({
       name: "name",
       streamUrl: rtspUrl,
-      wsPort: 6789,
+      wsPort: server,
       ffmpegOptions: {
         "-rtsp_transport": "tcp", // Add this line
         "-rtsp_flags": "prefer_tcp", // New line
@@ -82,6 +78,10 @@ app.post("/set-rtsp", (req, res) => {
 
 app.use(express.static("public"));
 
-app.listen(port, () => {
-  console.log(`App is listening at http://localhost:${port}`);
+wss.on('error', (error) => {
+  console.error('WebSocket server error:', error);
+});
+
+wss.on('listening', () => {
+  console.log('WebSocket server started and listening on port 3000.');
 });
